@@ -1,30 +1,35 @@
 # xhandler-python
 
-Create, sign and send the electronic documents (UBL XML) of SUNAT Peru from Python.
+[![License](https://img.shields.io/github/license/project-openubl/xhandler-python?logo=apache)](https://www.apache.org/licenses/LICENSE-2.0)
+[![CI](https://github.com/project-openubl/xhandler-python/actions/workflows/ci.yml/badge.svg)](https://github.com/project-openubl/xhandler-python/actions/workflows/ci.yml)
 
-- **xhandler.xbuilder**: invoices (boletas and facturas), credit and debit notes, guías
-  de remisión, perceptions, retentions, summaries, voided documents and reversions. Only
-  the essential data is required: defaults, taxes and totals are computed.
-- **xhandler.xsigner**: the enveloped RSA-SHA256 XML signature SUNAT requires (PEM or
-  PKCS#12).
-- **xhandler.xsender**: SUNAT's SOAP services (billService, consult and validation) and
-  the REST API of the guías de remisión, with the CDR, tickets and faults already read.
+Crea, firma y envía los comprobantes electrónicos (XML UBL) de la SUNAT del Perú desde Python.
 
-No native extension to compile: the work is done by the
-[xhandler](https://github.com/project-openubl/xhandler-rust) Rust core, embedded as a
-WebAssembly module and run with [wasmtime](https://github.com/bytecodealliance/wasmtime-py).
-The Go and Java libraries use the same core, so the three produce the same XML,
-signatures and requests.
+| Módulo | Qué hace |
+|---|---|
+| `xhandler.xbuilder` | Crea el XML de facturas, boletas, notas de crédito y débito, guías de remisión, percepciones, retenciones, resúmenes diarios, comunicaciones de baja y reversiones. Solo das los datos esenciales: los valores por defecto, impuestos y totales se calculan |
+| `xhandler.xsigner` | Firma el XML (RSA-SHA256, certificados PEM o PKCS#12) |
+| `xhandler.xsender` | Envía a la SUNAT (servicios SOAP y API REST de guías) y lee el CDR, tickets y errores |
 
-## Install
+Sin extensiones nativas que compilar: el trabajo lo hace el
+[núcleo xhandler](https://github.com/project-openubl/xhandler-rust), incrustado como un módulo
+WebAssembly. Las librerías de Go y Java usan el mismo núcleo, así que las tres producen el mismo
+XML, las mismas firmas y las mismas peticiones. Los modelos están tipados
+([pydantic](https://docs.pydantic.dev)).
+
+## Instalación
+
+Hasta la primera versión en PyPI, instálalo desde GitHub:
 
 ```shell
-pip install xhandler
+pip install "xhandler @ git+https://github.com/project-openubl/xhandler-python"
+# o
+uv add "xhandler @ git+https://github.com/project-openubl/xhandler-python"
 ```
 
-Python 3.10 or newer.
+Python 3.10 o superior, en Linux, macOS y Windows.
 
-## Usage
+## Uso
 
 ```python
 from decimal import Decimal
@@ -34,7 +39,7 @@ from xhandler import xbuilder
 from xhandler.xsender import Credentials, FileSender, URLs
 from xhandler.xsigner import SigningKey, sign
 
-# Create
+# Crear
 invoice = xbuilder.Invoice(
     serie_numero="F001-1",
     proveedor=xbuilder.Proveedor(ruc="12345678912", razon_social="Softgreen S.A.C."),
@@ -45,44 +50,43 @@ invoice = xbuilder.Invoice(
     ),
     detalles=[xbuilder.Detalle(descripcion="Item", cantidad=Decimal(2), precio=Decimal("100.00"))],
 )
-xml = xbuilder.build(invoice)  # today in Peru, current tax rates
+xml = xbuilder.build(invoice)  # fecha de hoy en Perú y tasas vigentes
 
-# Sign
-key = SigningKey.from_pkcs12(Path("certificate.pfx").read_bytes(), "password")
+# Firmar
+key = SigningKey.from_pkcs12(Path("certificado.pfx").read_bytes(), "password")
 signed = sign(xml.encode(), key)
 
-# Send
+# Enviar
 sender = FileSender(URLs.beta(), Credentials(username="12345678959MODDATOS", password="MODDATOS"))
 result = sender.send_file(signed)
 if result.cdr:
     # ACEPTADO La Factura numero F001-1, ha sido aceptada
     print(result.cdr.status, result.cdr.description)
-elif result.ticket:  # summaries, voided documents, guías
-    verified = sender.verify_file_ticket(signed, result.ticket)
+elif result.ticket:  # resúmenes, bajas y guías: consulta el ticket después
+    print(sender.verify_file_ticket(signed, result.ticket))
 else:
-    print(result.fault.status, result.fault.message)
+    print(result.fault.status, result.fault.code, result.fault.message)
 ```
 
-- `xbuilder.enrich` returns the document with the computed values (taxes, totals,
-  legends) instead of the XML. `xbuilder.Defaults` overrides the date or the tax rates.
-- Errors of the core are `xhandler.XhandlerError` with a `kind`: `ErrorKind.VALIDATION`
-  (e.g. an unknown catalog code), `ErrorKind.INVALID_KEY`, `ErrorKind.RESPONSE`...
-- Guías de remisión need `URLs.production()` (SUNAT has no beta for them) and the
-  `client_id`/`client_secret` of the API client. Share one `SunatClient` between the
-  `FileSender`s of several companies: it keeps the connections and the tokens.
+- **Crear**: `xbuilder.enrich` devuelve el documento con los valores calculados (impuestos,
+  totales, leyendas) en lugar del XML. `xbuilder.Defaults` cambia la fecha de emisión o las tasas.
+- **Firmar**: `SigningKey.from_pem(llave_privada, certificado)` para archivos PEM. `sign` devuelve
+  texto si recibe texto y bytes si recibe bytes.
+- **Enviar**: `send_pack` envía varias facturas en un zip. `SunatClient` también tiene los
+  servicios de consulta y validación (`get_status`, `get_status_cdr`, `validate_cdp`,
+  `validate_file`). Si envías por varias empresas, comparte un `SunatClient` (conexiones y tokens)
+  entre sus `FileSender`.
+- **Guías de remisión**: usan `URLs.production()` (la SUNAT no tiene beta para ellas) y el
+  `client_id`/`client_secret` de la API.
+- **Errores**: los del núcleo lanzan `xhandler.XhandlerError` con un `kind`: `ErrorKind.VALIDATION`
+  (p. ej. un código de catálogo inválido), `ErrorKind.INVALID_KEY`, `ErrorKind.RESPONSE`... Los
+  rechazos de la SUNAT no son errores: llegan en `result.fault`.
 
-## Development
+## Contribuir
 
-The WebAssembly module, the models (`src/xhandler/xbuilder/models.py`) and the
-conformance corpus (`testdata/conformance`) come from xhandler-rust:
+Revisa [CONTRIBUTING.md](CONTRIBUTING.md). Preguntas e ideas en el
+[chat de Zulip](https://projectopenubl.zulipchat.com/).
 
-```shell
-make sync RUST_REPO=../xhandler-rust   # runs make -C xhandler-wasm dist there and copies the results
-make test                               # every corpus case, raw and through the models
-make lint
-XHANDLER_E2E=true uv run pytest tests/test_e2e.py   # creates, signs and sends an invoice to SUNAT beta
-```
-
-## License
+## Licencia
 
 [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
