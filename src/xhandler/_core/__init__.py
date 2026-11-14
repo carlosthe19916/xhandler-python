@@ -18,7 +18,7 @@ from typing import Any
 
 import wasmtime
 
-CORE_VERSION = resources.files(__package__).joinpath("VERSION").read_text().strip()
+CORE_VERSION = resources.files(__package__).joinpath("VERSION").read_text(encoding="utf-8").strip()
 """Version of the embedded xhandler core."""
 
 

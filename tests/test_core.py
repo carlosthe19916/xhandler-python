@@ -21,7 +21,7 @@ def test_conformance(case: Case) -> None:
 
 
 def test_version_matches_synced_core() -> None:
-    synced = (Path(_core.__file__).parent / "VERSION").read_text().strip()
+    synced = (Path(_core.__file__).parent / "VERSION").read_text(encoding="utf-8").strip()
     assert _core.invoke("version") == synced == xhandler.CORE_VERSION
 
 

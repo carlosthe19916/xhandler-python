@@ -13,7 +13,7 @@ from xhandler.xsender import (
     FileSender,
     Status,
     SunatClient,
-    Urls,
+    URLs,
 )
 
 CREDENTIALS = Credentials(
@@ -54,28 +54,28 @@ class Sunat:
 
         return SunatClient(httpx.Client(transport=httpx.MockTransport(respond)))
 
-    def sender(self, urls: Urls) -> FileSender:
+    def sender(self, urls: URLs) -> FileSender:
         return FileSender(urls, CREDENTIALS, self.client())
 
 
 def test_send_file_reads_the_cdr() -> None:
     sunat = Sunat(lambda _: answer("send_file_cdr"))
-    result = sunat.sender(Urls.beta()).send_file(document("F001-1"))
+    result = sunat.sender(URLs.beta()).send_file(document("F001-1"))
 
     assert result.cdr is not None
     assert result.cdr.status is Status.ACCEPTED
     assert result.cdr.zip
-    assert result.send_target.url == Urls.beta().invoice
+    assert result.send_target.url == URLs.beta().invoice
     assert result.verify_ticket_target is None
     request = sunat.requests[0]
     assert request.headers["SOAPAction"] == "urn:sendBill"
-    assert str(request.url) == Urls.beta().invoice
+    assert str(request.url) == URLs.beta().invoice
 
 
 def test_send_file_reads_faults() -> None:
     """SUNAT answers SOAP faults with HTTP 500"""
     sunat = Sunat(lambda _: answer("send_file_rejected"))
-    result = sunat.sender(Urls.beta()).send_file(document("F001-1"))
+    result = sunat.sender(URLs.beta()).send_file(document("F001-1"))
     assert result.fault is not None
     assert result.fault.status is Status.REJECTED
 
@@ -83,13 +83,13 @@ def test_send_file_reads_faults() -> None:
 def test_unreadable_answers_are_response_errors() -> None:
     sunat = Sunat(lambda _: (503, "<html>Service Unavailable</html>"))
     with pytest.raises(XhandlerError) as error:
-        sunat.sender(Urls.beta()).send_file(document("F001-1"))
+        sunat.sender(URLs.beta()).send_file(document("F001-1"))
     assert error.value.kind is ErrorKind.RESPONSE
 
 
 def test_verify_file_ticket_in_progress() -> None:
     sunat = Sunat(lambda _: answer("verify_ticket_in_progress"))
-    result = sunat.sender(Urls.beta()).verify_file_ticket(
+    result = sunat.sender(URLs.beta()).verify_file_ticket(
         document("RA-20200328-1"), "1703154974517"
     )
     assert result.no_cdr is not None
@@ -110,7 +110,7 @@ def test_guias_reuse_the_token_until_rejected() -> None:
             return 401, '{"cod":"401","msg":"Unauthorized"}'
         return 200, '{"numTicket":"a7b3c1d2-0001"}'
 
-    sender = Sunat(handle).sender(Urls.production())
+    sender = Sunat(handle).sender(URLs.production())
     for _ in range(3):
         assert sender.send_file(document("despatch-advice-T")).ticket
     # The second send is rejected once and retried with a new token
@@ -124,7 +124,7 @@ def test_rate_limited_requests_are_retried() -> None:
         return answer("send_file_cdr")
 
     sunat = Sunat(handle)
-    result = sunat.sender(Urls.beta()).send_file(document("F001-1"))
+    result = sunat.sender(URLs.beta()).send_file(document("F001-1"))
     assert result.cdr is not None
     assert len(sunat.requests) == 2
 
@@ -140,7 +140,7 @@ def test_the_security_api_url_can_be_set() -> None:
 
     sunat = Sunat(handle)
     client = SunatClient(sunat.client()._http, security_api_url="http://localhost:8080")
-    FileSender(Urls.production(), CREDENTIALS, client).send_file(document("despatch-advice-T"))
+    FileSender(URLs.production(), CREDENTIALS, client).send_file(document("despatch-advice-T"))
     assert token_urls == ["http://localhost:8080/v1/clientessol/client-id/oauth2/token/"]
 
 
@@ -171,7 +171,7 @@ def test_a_supplied_token_is_used_as_is() -> None:
 
     sunat = Sunat(handle)
     sender = FileSender(
-        Urls.production(),
+        URLs.production(),
         Credentials(username="", password="", token="given-token"),
         sunat.client(),
     )
@@ -190,6 +190,6 @@ def test_failed_connections_are_retried_once() -> None:
         return httpx.Response(status, text=body)
 
     client = SunatClient(httpx.Client(transport=httpx.MockTransport(respond)))
-    result = FileSender(Urls.beta(), CREDENTIALS, client).send_file(document("F001-1"))
+    result = FileSender(URLs.beta(), CREDENTIALS, client).send_file(document("F001-1"))
     assert result.cdr is not None
     assert len(requests) == 2

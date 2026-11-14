@@ -28,7 +28,7 @@ def cases(op: str | None = None) -> list[Case]:
     for path in sorted(CORPUS.rglob("*.json")):
         case_op, *name = path.relative_to(CORPUS).with_suffix("").parts
         if op is None or case_op == op:
-            data = json.loads(path.read_text())
+            data = json.loads(path.read_bytes())
             found.append(Case(case_op, "/".join(name), data["input"], data["expected"]))
     if not found:
         raise RuntimeError(f"no conformance cases in {CORPUS} (run make sync)")

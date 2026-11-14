@@ -31,7 +31,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from xhandler import xbuilder
-from xhandler.xsender import Credentials, FileSender, Urls
+from xhandler.xsender import Credentials, FileSender, URLs
 from xhandler.xsigner import KeyPair, sign
 
 # Create
@@ -52,10 +52,10 @@ key = KeyPair.from_pkcs12(Path("certificate.pfx").read_bytes(), "password")
 signed = sign(xml.encode(), key)
 
 # Send
-sender = FileSender(Urls.beta(), Credentials(username="12345678959MODDATOS", password="MODDATOS"))
+sender = FileSender(URLs.beta(), Credentials(username="12345678959MODDATOS", password="MODDATOS"))
 result = sender.send_file(signed)
 if result.cdr:
-    # Status.ACCEPTED La Factura numero F001-1, ha sido aceptada
+    # ACEPTADO La Factura numero F001-1, ha sido aceptada
     print(result.cdr.status, result.cdr.description)
 elif result.ticket:  # summaries, voided documents, guías
     verified = sender.verify_file_ticket(signed, result.ticket)
@@ -67,7 +67,7 @@ else:
   legends) instead of the XML. `xbuilder.Defaults` overrides the date or the tax rates.
 - Errors of the core are `xhandler.XhandlerError` with a `kind`: `ErrorKind.VALIDATION`
   (e.g. an unknown catalog code), `ErrorKind.INVALID_KEY`, `ErrorKind.RESPONSE`...
-- Guías de remisión need `Urls.production()` (SUNAT has no beta for them) and the
+- Guías de remisión need `URLs.production()` (SUNAT has no beta for them) and the
   `client_id`/`client_secret` of the API client. Share one `SunatClient` between the
   `FileSender`s of several companies: it keeps the connections and the tokens.
 

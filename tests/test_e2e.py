@@ -9,7 +9,7 @@ import pytest
 from conformance import cases
 
 from xhandler import xbuilder
-from xhandler.xsender import Credentials, FileSender, Status, Urls
+from xhandler.xsender import Credentials, FileSender, Status, URLs
 from xhandler.xsigner import KeyPair, sign
 
 pytestmark = pytest.mark.skipif(
@@ -38,7 +38,7 @@ def test_create_sign_and_send_to_sunat_beta() -> None:
     signed = sign(xbuilder.build(invoice).encode(), _key_pair())
 
     sender = FileSender(
-        Urls.beta(), Credentials(username="12345678959MODDATOS", password="MODDATOS")
+        URLs.beta(), Credentials(username="12345678959MODDATOS", password="MODDATOS")
     )
     result = sender.send_file(signed)
 

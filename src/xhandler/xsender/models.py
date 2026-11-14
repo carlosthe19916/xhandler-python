@@ -26,7 +26,7 @@ class _Model(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
 
-class Urls(_Model):
+class URLs(_Model):
     """The SUNAT services where a company sends its documents."""
 
     invoice: str
@@ -35,7 +35,7 @@ class Urls(_Model):
     """The REST API of the guias de remision; SUNAT has no beta for it."""
 
     @classmethod
-    def beta(cls) -> Urls:
+    def beta(cls) -> URLs:
         """SUNAT beta (testing) services; without guias de remision."""
         return cls(
             invoice="https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService",
@@ -43,7 +43,7 @@ class Urls(_Model):
         )
 
     @classmethod
-    def production(cls) -> Urls:
+    def production(cls) -> URLs:
         """SUNAT production services."""
         return cls(
             invoice="https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService",
@@ -103,7 +103,7 @@ class ConsultDocument(_Model):
     numero: int
 
 
-class ValidateCdp(ConsultDocument):
+class ValidateCDP(ConsultDocument):
     """The criteria of validaCDPcriterios."""
 
     tipo_documento_identidad_receptor: str
@@ -116,7 +116,7 @@ class ValidateCdp(ConsultDocument):
 
 
 class Status(str, Enum):
-    """The SUNAT verdict of a document."""
+    """The SUNAT verdict of a document; prints as SUNAT says it, e.g. ACEPTADO."""
 
     ACCEPTED = "ACEPTADO"
     REJECTED = "RECHAZADO"
@@ -124,8 +124,11 @@ class Status(str, Enum):
     IN_PROGRESS = "EN_PROCESO"
     UNKNOWN = "UNKNOWN"
 
+    def __str__(self) -> str:
+        return self.value
 
-class Cdr(_Model):
+
+class CDR(_Model):
     """The receipt SUNAT gives back (Constancia de Recepcion)."""
 
     zip: Bytes
@@ -148,7 +151,7 @@ class Fault(_Model):
     status: Status
 
 
-class NoCdr(_Model):
+class NoCDR(_Model):
     """A ticket status without CDR, e.g. "98" (in progress)."""
 
     status_code: str
@@ -159,7 +162,7 @@ class SendResult(_Model):
     """The answer to a sent file: a CDR, a ticket to verify later (summaries,
     voided documents, packs, guias) or a fault."""
 
-    cdr: Cdr | None = None
+    cdr: CDR | None = None
     ticket: str | None = None
     fault: Fault | None = None
     send_target: Target
@@ -170,8 +173,8 @@ class SendResult(_Model):
 class VerifyResult(_Model):
     """The answer to a ticket: a CDR, no CDR yet (e.g. in progress) or a fault."""
 
-    cdr: Cdr | None = None
-    no_cdr: NoCdr | None = None
+    cdr: CDR | None = None
+    no_cdr: NoCDR | None = None
     fault: Fault | None = None
 
 

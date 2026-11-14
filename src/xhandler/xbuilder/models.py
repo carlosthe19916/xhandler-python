@@ -128,8 +128,9 @@ class Detalle(_Model):
     """Código estándar GS1/GTIN (StandardItemIdentification).
     Incluye el código y el tipo de estructura GTIN (e.g. "GTIN-8", "GTIN-13", "GTIN-14")."""
     precio: PlainDecimal | None = None
-    """Precio + bool. True si el precio incluye impuestos, false si no incluye impuestos"""
+    """Precio unitario sin impuestos; se calcula de `precio_con_impuestos` si no se da"""
     precio_con_impuestos: PlainDecimal | None = None
+    """Precio unitario con impuestos; se calcula de `precio` si no se da"""
     precio_referencia: PlainDecimal | None = None
     precio_referencia_tipo: str | None = None
     """Catalog16"""

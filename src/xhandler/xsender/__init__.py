@@ -19,26 +19,26 @@ from xhandler._core import ErrorKind, XhandlerError, invoke
 from xhandler.xsender.models import (
     BILL_CONSULT_SERVICE_URL,
     BILL_VALID_SERVICE_URL,
-    Cdr,
+    CDR,
     ConsultDocument,
     ConsultResult,
     ConsultStatus,
     Credentials,
     Fault,
     File,
-    NoCdr,
+    NoCDR,
     SendResult,
     Status,
     Target,
-    Urls,
-    ValidateCdp,
+    URLs,
+    ValidateCDP,
     VerifyResult,
 )
 
 __all__ = [
     "BILL_CONSULT_SERVICE_URL",
     "BILL_VALID_SERVICE_URL",
-    "Cdr",
+    "CDR",
     "ConsultDocument",
     "ConsultResult",
     "ConsultStatus",
@@ -46,13 +46,13 @@ __all__ = [
     "Fault",
     "File",
     "FileSender",
-    "NoCdr",
+    "NoCDR",
     "SendResult",
     "Status",
     "SunatClient",
     "Target",
-    "Urls",
-    "ValidateCdp",
+    "URLs",
+    "ValidateCDP",
     "VerifyResult",
 ]
 
@@ -103,7 +103,7 @@ class SunatClient:
         call = {"get_status_cdr": {"url": url, "document": _json(document)}}
         return ConsultResult.model_validate(self._exchange(call, False, credentials))
 
-    def validate_cdp(self, url: str, cdp: ValidateCdp, credentials: Credentials) -> ConsultResult:
+    def validate_cdp(self, url: str, cdp: ValidateCDP, credentials: Credentials) -> ConsultResult:
         """billValidService validaCDPcriterios."""
         call = {"validate_cdp": {"url": url, "cdp": _json(cdp)}}
         return ConsultResult.model_validate(self._exchange(call, False, credentials))
@@ -214,7 +214,7 @@ class FileSender:
     everything else: the file name, the service and the operation."""
 
     def __init__(
-        self, urls: Urls, credentials: Credentials, client: SunatClient | None = None
+        self, urls: URLs, credentials: Credentials, client: SunatClient | None = None
     ) -> None:
         self.urls = urls
         self.credentials = credentials
