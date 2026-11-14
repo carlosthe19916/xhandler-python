@@ -33,6 +33,8 @@ class ErrorKind(str, Enum):
     """The document has invalid values, e.g. an unknown catalog code."""
     RENDER = "render"
     """The XML could not be rendered."""
+    INVALID_KEY = "invalid_key"
+    """The private key or certificate can't be read, e.g. a wrong keystore password."""
 
 
 class XhandlerError(Exception):

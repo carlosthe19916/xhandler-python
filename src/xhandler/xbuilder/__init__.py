@@ -12,9 +12,11 @@ from __future__ import annotations
 from typing import Any, TypeVar, cast
 
 from xhandler._core import invoke
+from xhandler.xbuilder import models as _models
 from xhandler.xbuilder.models import *  # noqa: F403 (the models are the API)
 from xhandler.xbuilder.models import Defaults, Document
-from xhandler.xbuilder.models import __all__ as __all__
+
+__all__ = [*_models.__all__, "build", "enrich"]
 
 D = TypeVar("D", bound=Document)
 
