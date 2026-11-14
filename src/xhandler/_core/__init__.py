@@ -79,18 +79,18 @@ class _Instance:
         self._call: wasmtime.Func = exports["xh_invoke"]  # type: ignore[assignment]
 
     def invoke(self, request: bytes) -> bytes:
+        """Runs one request. After a trap the instance must be discarded, so
+        nothing is freed then."""
         store = self._store
         ptr = self._alloc(store, len(request))
-        try:
-            self._memory.write(store, request, ptr)
-            packed = self._call(store, ptr, len(request))
-        finally:
-            self._free(store, ptr, len(request))
+        self._memory.write(store, request, ptr)
+        # wasmtime returns i64 results as signed integers
+        packed = self._call(store, ptr, len(request)) & 0xFFFFFFFFFFFFFFFF
         response_ptr, response_len = packed >> 32, packed & 0xFFFFFFFF
-        try:
-            return bytes(self._memory.read(store, response_ptr, response_ptr + response_len))
-        finally:
-            self._free(store, response_ptr, response_len)
+        response = bytes(self._memory.read(store, response_ptr, response_ptr + response_len))
+        self._free(store, ptr, len(request))
+        self._free(store, response_ptr, response_len)
+        return response
 
 
 class _Pool:

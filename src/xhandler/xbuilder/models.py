@@ -5,9 +5,16 @@ from __future__ import annotations
 from datetime import date, time
 from decimal import Decimal
 from enum import Enum
-from typing import Union
+from typing import Annotated, ClassVar, Union
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer
+
+__all__ = ['Anticipo', 'Atributo', 'Cargo', 'Chofer', 'Cliente', 'CodigoGs1', 'Contacto', 'CreditNote', 'CuotaPago', 'DOCUMENT_KINDS', 'DebitNote', 'Defaults', 'Descuento', 'DespatchAdvice', 'DespatchAdviceAtributo', 'DespatchAdviceDocumentoBaja', 'DespatchAdviceDocumentoRelacionado', 'DespatchAdviceItem', 'Destinatario', 'Detalle', 'Detraccion', 'Direccion', 'Document', 'DocumentoAdicional', 'DocumentoRelacionado', 'Envio', 'Firmante', 'FormaPago', 'Guia', 'GuiaEmbebida', 'Invoice', 'Partida', 'Percepcion', 'PercepcionRetencionComprobanteAfectado', 'PercepcionRetencionOperacion', 'Perception', 'Proveedor', 'Puerto', 'Remitente', 'Retention', 'Reversion', 'SummaryDocuments', 'SummaryDocumentsCliente', 'SummaryDocumentsComprobanteAfectado', 'SummaryDocumentsImpuestos', 'SummaryDocumentsItem', 'SummaryDocumentsItemComprobante', 'SummaryDocumentsPercepcion', 'SummaryDocumentsValorVenta', 'TipoCambio', 'TipoFormaPago', 'TotalImporteInvoice', 'TotalImporteNote', 'TotalImpuestos', 'Transportista', 'Vehiculo', 'VoidedDocuments', 'VoidedDocumentsItem']
+
+PlainDecimal = Annotated[
+    Decimal, PlainSerializer(lambda d: format(d, "f"), return_type=str, when_used="json")
+]
+"""A Decimal sent as plain text with its scale: "118.00", never "1.18E+2"."""
 
 
 class _Model(BaseModel):
@@ -22,7 +29,7 @@ class Anticipo(_Model):
     """Serie y número de comprobante del detalle, por ejemplo "F123-4\""""
     comprobante_tipo: str | None = None
     """Catalog12."""
-    monto: Decimal
+    monto: PlainDecimal
 
 
 class Atributo(_Model):
@@ -39,10 +46,10 @@ class Cargo(_Model):
     """Cargo global (AllowanceCharge con ChargeIndicator true)"""
     tipo: str
     """Catalog53, e.g. "49" (afecta la base imponible) or "50" (no la afecta)"""
-    monto: Decimal
-    monto_base: Decimal | None = None
+    monto: PlainDecimal
+    monto_base: PlainDecimal | None = None
     """`monto` when missing"""
-    factor: Decimal | None = None
+    factor: PlainDecimal | None = None
 
 
 class Chofer(_Model):
@@ -111,7 +118,7 @@ class Firmante(_Model):
 class Detalle(_Model):
     """Detalle de las ventas en Boleta/Factura/Nota Credito/Nota Debito"""
     descripcion: str = ''
-    cantidad: Decimal = Decimal("0")
+    cantidad: PlainDecimal = Decimal("0")
     unidad_medida: str | None = None
     codigo: str | None = None
     """Código del producto del vendedor (SellersItemIdentification)"""
@@ -120,52 +127,52 @@ class Detalle(_Model):
     codigo_gs1: CodigoGs1 | None = None
     """Código estándar GS1/GTIN (StandardItemIdentification).
     Incluye el código y el tipo de estructura GTIN (e.g. "GTIN-8", "GTIN-13", "GTIN-14")."""
-    precio: Decimal | None = None
+    precio: PlainDecimal | None = None
     """Precio + bool. True si el precio incluye impuestos, false si no incluye impuestos"""
-    precio_con_impuestos: Decimal | None = None
-    precio_referencia: Decimal | None = None
+    precio_con_impuestos: PlainDecimal | None = None
+    precio_referencia: PlainDecimal | None = None
     precio_referencia_tipo: str | None = None
     """Catalog16"""
-    igv_tasa: Decimal | None = None
-    icb_tasa: Decimal | None = None
-    isc_tasa: Decimal | None = None
+    igv_tasa: PlainDecimal | None = None
+    icb_tasa: PlainDecimal | None = None
+    isc_tasa: PlainDecimal | None = None
     igv_tipo: str | None = None
     """Catalog7"""
     isc_tipo: str | None = None
     """Catalog8"""
     icb_aplica: bool = False
-    icb: Decimal | None = None
-    igv: Decimal | None = None
-    igv_base_imponible: Decimal | None = None
-    isc: Decimal | None = None
-    isc_base_imponible: Decimal | None = None
-    total_impuestos: Decimal | None = None
+    icb: PlainDecimal | None = None
+    igv: PlainDecimal | None = None
+    igv_base_imponible: PlainDecimal | None = None
+    isc: PlainDecimal | None = None
+    isc_base_imponible: PlainDecimal | None = None
+    total_impuestos: PlainDecimal | None = None
     atributos: list[Atributo] = Field(default_factory=list)
 
 
 class TotalImporteNote(_Model):
-    importe: Decimal
-    importe_sin_impuestos: Decimal
+    importe: PlainDecimal
+    importe_sin_impuestos: PlainDecimal
 
 
 class TotalImpuestos(_Model):
     """Total impuestos"""
-    total: Decimal
-    ivap_importe: Decimal
-    ivap_base_imponible: Decimal
-    exportacion_importe: Decimal
-    exportacion_base_imponible: Decimal
-    gravado_importe: Decimal
-    gravado_base_imponible: Decimal
-    inafecto_importe: Decimal
-    inafecto_base_imponible: Decimal
-    exonerado_importe: Decimal
-    exonerado_base_imponible: Decimal
-    gratuito_importe: Decimal
-    gratuito_base_imponible: Decimal
-    icb_importe: Decimal
-    isc_importe: Decimal
-    isc_base_imponible: Decimal
+    total: PlainDecimal
+    ivap_importe: PlainDecimal
+    ivap_base_imponible: PlainDecimal
+    exportacion_importe: PlainDecimal
+    exportacion_base_imponible: PlainDecimal
+    gravado_importe: PlainDecimal
+    gravado_base_imponible: PlainDecimal
+    inafecto_importe: PlainDecimal
+    inafecto_base_imponible: PlainDecimal
+    exonerado_importe: PlainDecimal
+    exonerado_base_imponible: PlainDecimal
+    gratuito_importe: PlainDecimal
+    gratuito_base_imponible: PlainDecimal
+    icb_importe: PlainDecimal
+    isc_importe: PlainDecimal
+    isc_base_imponible: PlainDecimal
 
 
 class Guia(_Model):
@@ -184,6 +191,7 @@ class DocumentoRelacionado(_Model):
 
 class CreditNote(_Model):
     """Nota de credito"""
+    kind: ClassVar[str] = 'CreditNote'
     leyendas: dict[str, str] = Field(default_factory=dict)
     serie_numero: str = ''
     moneda: str | None = None
@@ -192,9 +200,9 @@ class CreditNote(_Model):
     proveedor: Proveedor = Field(default_factory=Proveedor)
     cliente: Cliente = Field(default_factory=Cliente)
     firmante: Firmante | None = None
-    icb_tasa: Decimal | None = None
-    igv_tasa: Decimal | None = None
-    ivap_tasa: Decimal | None = None
+    icb_tasa: PlainDecimal | None = None
+    igv_tasa: PlainDecimal | None = None
+    ivap_tasa: PlainDecimal | None = None
     tipo_nota: str | None = None
     """Catalog9"""
     comprobante_afectado_serie_numero: str = ''
@@ -211,12 +219,13 @@ class CreditNote(_Model):
 
 class CuotaPago(_Model):
     """Cuota de pago"""
-    importe: Decimal
+    importe: PlainDecimal
     fecha_pago: date
 
 
 class DebitNote(_Model):
     """Nota de debito"""
+    kind: ClassVar[str] = 'DebitNote'
     leyendas: dict[str, str] = Field(default_factory=dict)
     serie_numero: str = ''
     moneda: str | None = None
@@ -225,9 +234,9 @@ class DebitNote(_Model):
     proveedor: Proveedor = Field(default_factory=Proveedor)
     cliente: Cliente = Field(default_factory=Cliente)
     firmante: Firmante | None = None
-    icb_tasa: Decimal | None = None
-    igv_tasa: Decimal | None = None
-    ivap_tasa: Decimal | None = None
+    icb_tasa: PlainDecimal | None = None
+    igv_tasa: PlainDecimal | None = None
+    ivap_tasa: PlainDecimal | None = None
     tipo_nota: str | None = None
     """Catalog10"""
     comprobante_afectado_serie_numero: str = ''
@@ -243,21 +252,24 @@ class DebitNote(_Model):
 
 
 class Defaults(_Model):
-    """Values used when the document does not set them. The tax rates default to
-    the current SUNAT rates; `fecha_emision` is required (usually today)."""
-    icb_tasa: Decimal = Decimal("0.2")
-    igv_tasa: Decimal = Decimal("0.18")
-    ivap_tasa: Decimal = Decimal("0.04")
-    fecha_emision: date
+    """Values used when the document does not set them; every field is optional."""
+    fecha_emision: date | None = None
+    """Today in Peru by default"""
+    icb_tasa: PlainDecimal | None = None
+    """The current SUNAT rate by default"""
+    igv_tasa: PlainDecimal | None = None
+    """The current SUNAT rate by default"""
+    ivap_tasa: PlainDecimal | None = None
+    """The current SUNAT rate by default"""
 
 
 class Descuento(_Model):
     """Descuento asociado a un documento o item"""
     tipo: str | None = None
     """Catalog53."""
-    monto: Decimal
-    monto_base: Decimal | None = None
-    factor: Decimal | None = None
+    monto: PlainDecimal
+    monto_base: PlainDecimal | None = None
+    factor: PlainDecimal | None = None
 
 
 class DespatchAdviceDocumentoBaja(_Model):
@@ -339,9 +351,9 @@ class Envio(_Model):
     """Catalog20: motivo de traslado"""
     motivo_traslado: str | None = None
     sustento_peso: str | None = None
-    peso_total: Decimal = Decimal("0")
+    peso_total: PlainDecimal = Decimal("0")
     peso_total_unidad_medida: str = ''
-    peso_items: Decimal | None = None
+    peso_items: PlainDecimal | None = None
     """Peso neto de los items, en KGM"""
     numero_bultos: int | None = None
     indicadores: list[str] = Field(default_factory=list)
@@ -371,7 +383,7 @@ class DespatchAdviceAtributo(_Model):
 class DespatchAdviceItem(_Model):
     """Item de la guia de remision"""
     unidad_medida: str = ''
-    cantidad: Decimal = Decimal("0")
+    cantidad: PlainDecimal = Decimal("0")
     descripcion: str | None = None
     codigo: str = ''
     codigo_sunat: str | None = None
@@ -380,6 +392,7 @@ class DespatchAdviceItem(_Model):
 
 class DespatchAdvice(_Model):
     """Guia de Remision (GRE)"""
+    kind: ClassVar[str] = 'DespatchAdvice'
     serie_numero: str = ''
     version: str | None = None
     """UBL CustomizationID, "2.0" when missing"""
@@ -410,8 +423,8 @@ class Detraccion(_Model):
     cuenta_bancaria: str
     tipo_bien_detraido: str
     """Catalog54"""
-    porcentaje: Decimal
-    monto: Decimal | None = None
+    porcentaje: PlainDecimal
+    monto: PlainDecimal | None = None
 
 
 class TipoFormaPago(str, Enum):
@@ -424,7 +437,7 @@ class FormaPago(_Model):
     """Forma de pago"""
     tipo: TipoFormaPago | None = None
     cuotas: list[CuotaPago]
-    total: Decimal | None = None
+    total: PlainDecimal | None = None
 
 
 class GuiaEmbebida(_Model):
@@ -438,7 +451,7 @@ class GuiaEmbebida(_Model):
     """Placa del vehiculo"""
     tipo_modalidad_traslado: str
     """Catalog18: modalidad de traslado"""
-    peso_bruto: Decimal
+    peso_bruto: PlainDecimal
     peso_bruto_unidad_medida: str
 
 
@@ -446,25 +459,26 @@ class Percepcion(_Model):
     """Percepcion asociada a un documento"""
     tipo: str
     """Catalog53"""
-    porcentaje: Decimal | None = None
-    monto: Decimal | None = None
-    monto_base: Decimal | None = None
-    monto_total: Decimal | None = None
+    porcentaje: PlainDecimal | None = None
+    monto: PlainDecimal | None = None
+    monto_base: PlainDecimal | None = None
+    monto_total: PlainDecimal | None = None
 
 
 class TotalImporteInvoice(_Model):
     """Total Importe Invoice"""
-    anticipos: Decimal
-    descuentos: Decimal
-    cargos: Decimal = Decimal("0")
+    anticipos: PlainDecimal
+    descuentos: PlainDecimal
+    cargos: PlainDecimal = Decimal("0")
     """Cargos que no afectan la base imponible (ChargeTotalAmount)"""
-    importe: Decimal
-    importe_sin_impuestos: Decimal
-    importe_con_impuestos: Decimal
+    importe: PlainDecimal
+    importe_sin_impuestos: PlainDecimal
+    importe_con_impuestos: PlainDecimal
 
 
 class Invoice(_Model):
     """Boleta o Factura"""
+    kind: ClassVar[str] = 'Invoice'
     leyendas: dict[str, str] = Field(default_factory=dict)
     serie_numero: str = ''
     moneda: str | None = None
@@ -474,9 +488,9 @@ class Invoice(_Model):
     proveedor: Proveedor = Field(default_factory=Proveedor)
     cliente: Cliente = Field(default_factory=Cliente)
     firmante: Firmante | None = None
-    icb_tasa: Decimal | None = None
-    igv_tasa: Decimal | None = None
-    ivap_tasa: Decimal | None = None
+    icb_tasa: PlainDecimal | None = None
+    igv_tasa: PlainDecimal | None = None
+    ivap_tasa: PlainDecimal | None = None
     tipo_comprobante: str | None = None
     """Catalog1"""
     tipo_operacion: str | None = None
@@ -504,13 +518,13 @@ class PercepcionRetencionComprobanteAfectado(_Model):
     tipo_comprobante: str
     serie_numero: str
     fecha_emision: date
-    importe_total: Decimal
+    importe_total: PlainDecimal
     moneda: str | None = None
 
 
 class TipoCambio(_Model):
     """Tipo de cambio"""
-    valor: Decimal
+    valor: PlainDecimal
     fecha: date
 
 
@@ -518,13 +532,14 @@ class PercepcionRetencionOperacion(_Model):
     """Operacion de percepcion o retencion"""
     numero_operacion: int
     fecha_operacion: date
-    importe_operacion: Decimal
+    importe_operacion: PlainDecimal
     comprobante_afectado: PercepcionRetencionComprobanteAfectado
     tipo_cambio: TipoCambio | None = None
 
 
 class Perception(_Model):
     """Comprobante de Percepcion"""
+    kind: ClassVar[str] = 'Perception'
     serie: str = ''
     numero: int = 0
     fecha_emision: date | None = None
@@ -534,9 +549,9 @@ class Perception(_Model):
     firmante: Firmante | None = None
     tipo_regimen: str = ''
     """Catalog22"""
-    tipo_regimen_porcentaje: Decimal = Decimal("0")
-    importe_total_percibido: Decimal = Decimal("0")
-    importe_total_cobrado: Decimal = Decimal("0")
+    tipo_regimen_porcentaje: PlainDecimal = Decimal("0")
+    importe_total_percibido: PlainDecimal = Decimal("0")
+    importe_total_cobrado: PlainDecimal = Decimal("0")
     observaciones: str | None = None
     operacion: PercepcionRetencionOperacion | None = None
     documento_id: str | None = None
@@ -545,6 +560,7 @@ class Perception(_Model):
 
 class Retention(_Model):
     """Comprobante de Retencion"""
+    kind: ClassVar[str] = 'Retention'
     serie: str = ''
     numero: int = 0
     fecha_emision: date | None = None
@@ -554,9 +570,9 @@ class Retention(_Model):
     firmante: Firmante | None = None
     tipo_regimen: str = ''
     """Catalog23"""
-    tipo_regimen_porcentaje: Decimal = Decimal("0")
-    importe_total_retenido: Decimal = Decimal("0")
-    importe_total_pagado: Decimal = Decimal("0")
+    tipo_regimen_porcentaje: PlainDecimal = Decimal("0")
+    importe_total_retenido: PlainDecimal = Decimal("0")
+    importe_total_pagado: PlainDecimal = Decimal("0")
     observaciones: str | None = None
     operacion: PercepcionRetencionOperacion | None = None
     documento_id: str | None = None
@@ -576,6 +592,7 @@ class Reversion(_Model):
     """Comunicacion de reversion: same content as a [`VoidedDocuments`] (and
     rendered with its template), used to revert perception (P) and retention
     (R) documents. Its ID is "RR-YYYYMMDD-{numero}"."""
+    kind: ClassVar[str] = 'Reversion'
     numero: int = 0
     fecha_emision: date | None = None
     fecha_emision_comprobantes: date | None = None
@@ -602,36 +619,36 @@ class SummaryDocumentsPercepcion(_Model):
     """Percepcion aplicada a una boleta del resumen"""
     tipo_regimen: str
     """Catalog22: regimen de percepcion"""
-    porcentaje: Decimal
+    porcentaje: PlainDecimal
     """Porcentaje de percepcion (e.g. 2 para 2%)"""
-    monto_base: Decimal
+    monto_base: PlainDecimal
     """Base imponible (TaxableAmount)"""
-    monto: Decimal
+    monto: PlainDecimal
     """Importe percibido (TotalInvoiceAmount)"""
-    monto_total: Decimal
+    monto_total: PlainDecimal
     """Total cobrado incluida la percepcion (SUNATTotalCashed)"""
 
 
 class SummaryDocumentsValorVenta(_Model):
     """Valor de venta de un comprobante en el resumen"""
-    importe_total: Decimal = Decimal("0")
-    gravado: Decimal | None = None
-    exonerado: Decimal | None = None
-    inafecto: Decimal | None = None
-    gratuito: Decimal | None = None
-    otros_cargos: Decimal | None = None
+    importe_total: PlainDecimal = Decimal("0")
+    gravado: PlainDecimal | None = None
+    exonerado: PlainDecimal | None = None
+    inafecto: PlainDecimal | None = None
+    gratuito: PlainDecimal | None = None
+    otros_cargos: PlainDecimal | None = None
 
 
 class SummaryDocumentsImpuestos(_Model):
     """Impuestos de un comprobante en el resumen"""
-    igv: Decimal | None = None
+    igv: PlainDecimal | None = None
     """Filled with 0 when missing"""
-    igv_tasa: Decimal | None = None
+    igv_tasa: PlainDecimal | None = None
     """IGV rate as percentage (e.g., 18 for 18%). Required by SUNAT; filled from the defaults when missing."""
-    icb: Decimal | None = None
-    isc: Decimal | None = None
-    ivap: Decimal | None = None
-    otros: Decimal | None = None
+    icb: PlainDecimal | None = None
+    isc: PlainDecimal | None = None
+    ivap: PlainDecimal | None = None
+    otros: PlainDecimal | None = None
 
 
 class SummaryDocumentsItemComprobante(_Model):
@@ -656,6 +673,7 @@ class SummaryDocumentsItem(_Model):
 
 class SummaryDocuments(_Model):
     """Resumen diario de boletas"""
+    kind: ClassVar[str] = 'SummaryDocuments'
     numero: int = 0
     fecha_emision: date | None = None
     fecha_emision_comprobantes: date | None = None
@@ -669,6 +687,7 @@ class SummaryDocuments(_Model):
 
 class VoidedDocuments(_Model):
     """Comunicacion de Baja"""
+    kind: ClassVar[str] = 'VoidedDocuments'
     numero: int = 0
     fecha_emision: date | None = None
     fecha_emision_comprobantes: date | None = None

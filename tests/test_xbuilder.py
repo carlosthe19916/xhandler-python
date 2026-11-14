@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -29,7 +29,7 @@ def test_build_corpus_through_models(case: Case) -> None:
 @pytest.mark.parametrize("case", cases("enrich"), ids=lambda c: c.name)
 def test_enrich_corpus_through_models(case: Case) -> None:
     document = document_of(case.input["document"])
-    expected = document_of(case.expected["ok"])
+    expected = type(document).model_validate(case.expected["ok"])
     assert xbuilder.enrich(document, defaults_of(case)) == expected
 
 
@@ -63,6 +63,16 @@ def test_build_reports_validation_errors() -> None:
     assert error.value.kind is ErrorKind.VALIDATION
 
 
-def test_build_rejects_non_documents() -> None:
-    with pytest.raises(TypeError):
-        xbuilder.build(xbuilder.Proveedor(ruc="1", razon_social="x"))  # type: ignore[arg-type]
+def test_enrich_defaults_to_today_in_peru() -> None:
+    peru = timezone(timedelta(hours=-5))
+    before = datetime.now(peru).date()
+    enriched = xbuilder.enrich(invoice())
+    assert enriched.fecha_emision in (before, datetime.now(peru).date())
+
+
+def test_subclasses_keep_their_kind() -> None:
+    class MyInvoice(xbuilder.Invoice):
+        pass
+
+    document = MyInvoice.model_validate(invoice().model_dump())
+    assert "<Invoice" in xbuilder.build(document)

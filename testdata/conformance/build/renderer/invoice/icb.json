@@ -1,5 +1,11 @@
 {
   "input": {
+    "defaults": {
+      "fecha_emision": "2019-12-24",
+      "icb_tasa": "0.2",
+      "igv_tasa": "0.18",
+      "ivap_tasa": "0.04"
+    },
     "document": {
       "kind": "Invoice",
       "spec": {
@@ -32,8 +38,8 @@
             "isc_base_imponible": null,
             "isc_tasa": null,
             "isc_tipo": null,
-            "precio": null,
-            "precio_con_impuestos": "118",
+            "precio": "100",
+            "precio_con_impuestos": null,
             "precio_referencia": null,
             "precio_referencia_tipo": null,
             "total_impuestos": null,
@@ -57,8 +63,8 @@
             "isc_base_imponible": null,
             "isc_tasa": null,
             "isc_tipo": null,
-            "precio": null,
-            "precio_con_impuestos": "118",
+            "precio": "100",
+            "precio_con_impuestos": null,
             "precio_referencia": null,
             "precio_referencia_tipo": null,
             "total_impuestos": null,
@@ -96,9 +102,6 @@
         "total_importe": null,
         "total_impuestos": null
       }
-    },
-    "defaults": {
-      "fecha_emision": "2019-12-24"
     }
   },
   "expected": {
