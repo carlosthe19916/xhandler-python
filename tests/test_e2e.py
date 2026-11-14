@@ -10,17 +10,17 @@ from conformance import cases
 
 from xhandler import xbuilder
 from xhandler.xsender import Credentials, FileSender, Status, URLs
-from xhandler.xsigner import KeyPair, sign
+from xhandler.xsigner import SigningKey, sign
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("XHANDLER_E2E") != "true", reason="set XHANDLER_E2E=true to send to SUNAT beta"
 )
 
 
-def _key_pair() -> KeyPair:
+def _signing_key() -> SigningKey:
     """The test certificate of the corpus, the one SUNAT beta accepts for RUC 12345678912."""
     pem = next(c for c in cases("sign") if c.name == "pem/min_data_ruc").input["key"]["pem"]
-    return KeyPair.from_pem(pem["private_key"], pem["certificate"])
+    return SigningKey.from_pem(pem["private_key"], pem["certificate"])
 
 
 def test_create_sign_and_send_to_sunat_beta() -> None:
@@ -35,7 +35,7 @@ def test_create_sign_and_send_to_sunat_beta() -> None:
         ),
         detalles=[xbuilder.Detalle(descripcion="Item", cantidad=Decimal(2), precio=Decimal(100))],
     )
-    signed = sign(xbuilder.build(invoice).encode(), _key_pair())
+    signed = sign(xbuilder.build(invoice).encode(), _signing_key())
 
     sender = FileSender(
         URLs.beta(), Credentials(username="12345678959MODDATOS", password="MODDATOS")

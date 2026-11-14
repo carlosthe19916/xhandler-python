@@ -5,13 +5,13 @@ import pytest
 from conformance import Case, cases
 
 from xhandler import XhandlerError, xbuilder
-from xhandler.xsigner import KeyPair, sign
+from xhandler.xsigner import SigningKey, sign
 
 
-def key_pair(key: dict) -> KeyPair:
+def signing_key(key: dict) -> SigningKey:
     if "pem" in key:
-        return KeyPair.from_pem(key["pem"]["private_key"], key["pem"]["certificate"])
-    return KeyPair.from_pkcs12(base64.b64decode(key["pkcs12"]["der"]), key["pkcs12"]["password"])
+        return SigningKey.from_pem(key["pem"]["private_key"], key["pem"]["certificate"])
+    return SigningKey.from_pkcs12(base64.b64decode(key["pkcs12"]["der"]), key["pkcs12"]["password"])
 
 
 @pytest.mark.parametrize(
@@ -22,7 +22,7 @@ def key_pair(key: dict) -> KeyPair:
 )
 def test_sign_corpus(case: Case) -> None:
     xml = base64.b64decode(case.input["xml"])
-    key = key_pair(case.input["key"])
+    key = signing_key(case.input["key"])
 
     if "error" in case.expected:
         with pytest.raises(XhandlerError) as error:
@@ -44,10 +44,10 @@ def test_signs_built_documents() -> None:
         detalles=[xbuilder.Detalle(descripcion="Item", cantidad=Decimal(1), precio=Decimal(100))],
     )
     llama = next(c for c in cases("sign") if c.name == "pkcs12/llama")
-    signed = sign(xbuilder.build(invoice), key_pair(llama.input["key"]))
+    signed = sign(xbuilder.build(invoice), signing_key(llama.input["key"]))
     assert 'xmldsig#" Id="PROJECT-OPENUBL-SIGN">' in signed
 
 
-def test_key_pair_hides_its_secrets() -> None:
+def test_signing_key_hides_its_secrets() -> None:
     pem = next(c for c in cases("sign") if c.name == "pem/min_data_ruc")
-    assert "PRIVATE KEY" not in repr(key_pair(pem.input["key"]))
+    assert "PRIVATE KEY" not in repr(signing_key(pem.input["key"]))

@@ -193,3 +193,30 @@ def test_failed_connections_are_retried_once() -> None:
     result = FileSender(URLs.beta(), CREDENTIALS, client).send_file(document("F001-1"))
     assert result.cdr is not None
     assert len(requests) == 2
+
+
+def test_guia_errors_carry_both_codes() -> None:
+    def handle(request: httpx.Request) -> tuple[int, str]:
+        if "/oauth2/token/" in request.url.path:
+            return 200, json.dumps({"access_token": "the-token", "expires_in": 3600})
+        return 422, json.dumps(
+            {"cod": "422", "msg": "Unprocessable Entity", "errors": [{"cod": "1033", "msg": "x"}]}
+        )
+
+    result = Sunat(handle).sender(URLs.production()).send_file(document("despatch-advice-T"))
+    assert result.fault is not None
+    assert (result.fault.code, result.fault.http_status) == ("1033", 422)
+
+
+def test_the_sunat_code_can_come_in_a_header() -> None:
+    def respond(request: httpx.Request) -> httpx.Response:
+        if "/oauth2/token/" in request.url.path:
+            return httpx.Response(200, json={"access_token": "the-token", "expires_in": 3600})
+        return httpx.Response(400, headers={"cod": "2033"}, json={"cod": "400", "msg": "Bad"})
+
+    client = SunatClient(httpx.Client(transport=httpx.MockTransport(respond)))
+    result = FileSender(URLs.production(), CREDENTIALS, client).send_file(
+        document("despatch-advice-T")
+    )
+    assert result.fault is not None
+    assert (result.fault.code, result.fault.status) == ("2033", Status.REJECTED)

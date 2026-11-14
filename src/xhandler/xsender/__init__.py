@@ -190,7 +190,15 @@ class SunatClient:
 
 
 def _parse(call: Any, response: httpx.Response) -> Any:
-    return invoke("parse", {"call": call, "status": response.status_code, "body": response.text})
+    return invoke(
+        "parse",
+        {
+            "call": call,
+            "status": response.status_code,
+            "headers": list(response.headers.multi_items()),
+            "body": response.text,
+        },
+    )
 
 
 def _token_key(credentials: Credentials) -> str:

@@ -144,9 +144,12 @@ class Fault(_Model):
     """An error answered by SUNAT."""
 
     code: str
-    """SUNAT's raw code, e.g. "soap-env:Client.0111"."""
+    """SUNAT's code as given: the SOAP faultcode (e.g. "soap-env:Client.0111") or
+    the error code of a REST answer (e.g. "1033")."""
     sunat_code: int | None = None
     """The number in ``code`` (111), when it has one."""
+    http_status: int | None = None
+    """The status of the answer, e.g. 500 for SOAP faults or 422 for REST errors."""
     message: str
     status: Status
 

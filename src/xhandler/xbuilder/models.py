@@ -361,7 +361,8 @@ class Envio(_Model):
     """Indicadores especiales (SpecialInstructions)"""
     tipo_modalidad_traslado: str = ''
     """Catalog18: modalidad de traslado (01=publico, 02=privado)"""
-    fecha_traslado: date = date.fromisoformat("1970-01-01")
+    fecha_traslado: date | None = None
+    """Fecha de inicio del traslado; obligatoria"""
     transportista: Transportista | None = None
     choferes: list[Chofer] = Field(default_factory=list)
     vehiculo: Vehiculo | None = None

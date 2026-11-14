@@ -10,7 +10,7 @@ from typing import Any, overload
 from xhandler._core import invoke
 
 
-class KeyPair:
+class SigningKey:
     """The private key and certificate that sign the documents. The key is
     checked when signing. It never shows its secrets in ``repr``."""
 
@@ -20,24 +20,24 @@ class KeyPair:
         self._key = key
 
     @classmethod
-    def from_pem(cls, private_key: str, certificate: str) -> KeyPair:
+    def from_pem(cls, private_key: str, certificate: str) -> SigningKey:
         """A PEM private key (PKCS#8 or PKCS#1) and a PEM X.509 certificate."""
         return cls({"pem": {"private_key": private_key, "certificate": certificate}})
 
     @classmethod
-    def from_pkcs12(cls, der: bytes, password: str) -> KeyPair:
-        """The key pair stored in a PKCS#12 keystore (.pfx, .p12)."""
+    def from_pkcs12(cls, der: bytes, password: str) -> SigningKey:
+        """The signing key stored in a PKCS#12 keystore (.pfx, .p12)."""
         return cls({"pkcs12": {"der": base64.b64encode(der).decode(), "password": password}})
 
     def __repr__(self) -> str:
-        return "KeyPair(<redacted>)"
+        return "SigningKey(<redacted>)"
 
 
 @overload
-def sign(xml: bytes, key: KeyPair) -> bytes: ...
+def sign(xml: bytes, key: SigningKey) -> bytes: ...
 @overload
-def sign(xml: str, key: KeyPair) -> str: ...
-def sign(xml: bytes | str, key: KeyPair) -> bytes | str:
+def sign(xml: str, key: SigningKey) -> str: ...
+def sign(xml: bytes | str, key: SigningKey) -> bytes | str:
     """Returns the XML with its signature, as bytes for bytes and as text for
     text. Bytes may be UTF-8 or ISO-8859-1 (as their XML declaration says);
     the signed bytes are UTF-8."""

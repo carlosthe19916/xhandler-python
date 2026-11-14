@@ -32,7 +32,7 @@ from pathlib import Path
 
 from xhandler import xbuilder
 from xhandler.xsender import Credentials, FileSender, URLs
-from xhandler.xsigner import KeyPair, sign
+from xhandler.xsigner import SigningKey, sign
 
 # Create
 invoice = xbuilder.Invoice(
@@ -48,7 +48,7 @@ invoice = xbuilder.Invoice(
 xml = xbuilder.build(invoice)  # today in Peru, current tax rates
 
 # Sign
-key = KeyPair.from_pkcs12(Path("certificate.pfx").read_bytes(), "password")
+key = SigningKey.from_pkcs12(Path("certificate.pfx").read_bytes(), "password")
 signed = sign(xml.encode(), key)
 
 # Send
