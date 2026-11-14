@@ -134,9 +134,12 @@ class Cdr(_Model):
 
 
 class Fault(_Model):
-    """An error answered by SUNAT, e.g. "soap-env:Client.0111"."""
+    """An error answered by SUNAT."""
 
     code: str
+    """SUNAT's raw code, e.g. "soap-env:Client.0111"."""
+    sunat_code: int | None = None
+    """The number in ``code`` (111), when it has one."""
     message: str
     status: Status
 
