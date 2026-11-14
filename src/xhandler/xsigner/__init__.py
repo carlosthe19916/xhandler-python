@@ -5,18 +5,19 @@ of the document, as rendered by :mod:`xhandler.xbuilder`."""
 from __future__ import annotations
 
 import base64
-from dataclasses import dataclass
-from typing import Any
+from typing import Any, overload
 
 from xhandler._core import invoke
 
 
-@dataclass(frozen=True)
 class KeyPair:
     """The private key and certificate that sign the documents. The key is
-    checked when signing."""
+    checked when signing. It never shows its secrets in ``repr``."""
 
-    _key: dict[str, Any]
+    __slots__ = ("_key",)
+
+    def __init__(self, key: dict[str, Any]) -> None:
+        self._key = key
 
     @classmethod
     def from_pem(cls, private_key: str, certificate: str) -> KeyPair:
@@ -28,10 +29,20 @@ class KeyPair:
         """The key pair stored in a PKCS#12 keystore (.pfx, .p12)."""
         return cls({"pkcs12": {"der": base64.b64encode(der).decode(), "password": password}})
 
+    def __repr__(self) -> str:
+        return "KeyPair(<redacted>)"
 
-def sign(xml: bytes | str, key: KeyPair) -> bytes:
-    """Returns the XML with its signature. The XML may be UTF-8 or ISO-8859-1
-    bytes, or text; the signed XML is UTF-8."""
+
+@overload
+def sign(xml: bytes, key: KeyPair) -> bytes: ...
+@overload
+def sign(xml: str, key: KeyPair) -> str: ...
+def sign(xml: bytes | str, key: KeyPair) -> bytes | str:
+    """Returns the XML with its signature, as bytes for bytes and as text for
+    text. Bytes may be UTF-8 or ISO-8859-1 (as their XML declaration says);
+    the signed bytes are UTF-8."""
     data = xml.encode() if isinstance(xml, str) else xml
-    signed: str = invoke("sign", {"xml": base64.b64encode(data).decode(), "key": key._key})
-    return base64.b64decode(signed)
+    signed = base64.b64decode(
+        invoke("sign", {"xml": base64.b64encode(data).decode(), "key": key._key})
+    )
+    return signed.decode() if isinstance(xml, str) else signed

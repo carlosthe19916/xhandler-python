@@ -45,7 +45,9 @@ def test_signs_built_documents() -> None:
     )
     llama = next(c for c in cases("sign") if c.name == "pkcs12/llama")
     signed = sign(xbuilder.build(invoice), key_pair(llama.input["key"]))
-    assert (
-        b'<ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#" Id="PROJECT-OPENUBL-SIGN">'
-        in signed
-    )
+    assert 'xmldsig#" Id="PROJECT-OPENUBL-SIGN">' in signed
+
+
+def test_key_pair_hides_its_secrets() -> None:
+    pem = next(c for c in cases("sign") if c.name == "pem/min_data_ruc")
+    assert "PRIVATE KEY" not in repr(key_pair(pem.input["key"]))
