@@ -55,7 +55,8 @@ signed = sign(xml.encode(), key)
 sender = FileSender(Urls.beta(), Credentials(username="12345678959MODDATOS", password="MODDATOS"))
 result = sender.send_file(signed)
 if result.cdr:
-    print(result.cdr.status, result.cdr.description)  # Status.ACCEPTED La Factura numero F001-1, ...
+    # Status.ACCEPTED La Factura numero F001-1, ha sido aceptada
+    print(result.cdr.status, result.cdr.description)
 elif result.ticket:  # summaries, voided documents, guías
     verified = sender.verify_file_ticket(signed, result.ticket)
 else:

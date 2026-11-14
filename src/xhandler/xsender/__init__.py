@@ -73,8 +73,21 @@ class SunatClient:
         the guias are requested (SUNAT's by default)."""
         self._http = http or httpx.Client(timeout=httpx.Timeout(120, connect=30))
         self._security_api_url = security_api_url
-        self._lock = threading.Lock()
+        self._lock = threading.Lock()  # guards _tokens
         self._tokens: dict[str, tuple[str, float]] = {}
+        # Held while a token is requested, so concurrent calls don't revoke
+        # each other's tokens
+        self._requesting = threading.Lock()
+
+    def close(self) -> None:
+        """Closes the HTTP connections."""
+        self._http.close()
+
+    def __enter__(self) -> SunatClient:
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.close()
 
     def get_status(
         self, url: str, document: ConsultDocument, credentials: Credentials
@@ -106,10 +119,11 @@ class SunatClient:
         once with a new token. A SOAP call refused by SUNAT's rate limiting is
         retried after a pause."""
         if rest:
-            response = self._send_with_token(call, credentials)
+            token = self._token(credentials)
+            response = self._send(self._request(call, credentials, token))
             if response.status_code == 401 and credentials.token is None:
-                self._forget(credentials)
-                response = self._send_with_token(call, credentials)
+                self._forget(credentials, token)
+                response = self._send(self._request(call, credentials, self._token(credentials)))
             return _parse(call, response)
 
         request = self._request(call, credentials, None)
@@ -120,9 +134,6 @@ class SunatClient:
                 if error.kind is not ErrorKind.RATE_LIMITED or pause is None:
                     raise
                 time.sleep(pause)
-
-    def _send_with_token(self, call: Any, credentials: Credentials) -> httpx.Response:
-        return self._send(self._request(call, credentials, self._token(credentials)))
 
     @staticmethod
     def _request(call: Any, credentials: Credentials, token: str | None) -> Any:
@@ -139,8 +150,8 @@ class SunatClient:
 
         try:
             return send()
-        except httpx.ConnectError:
-            return send()  # once more when the connection failed
+        except (httpx.ConnectError, httpx.ConnectTimeout):
+            return send()  # once more: the request never reached SUNAT
 
     def _token(self, credentials: Credentials) -> str:
         """The token of the credentials, a cached one (reused until a minute
@@ -148,10 +159,21 @@ class SunatClient:
         if credentials.token is not None:
             return credentials.token
         key = _token_key(credentials)
+        cached = self._cached_token(key)
+        if cached:
+            return cached
+        with self._requesting:
+            cached = self._cached_token(key)
+            if cached:
+                return cached
+            return self._request_token(key, credentials)
+
+    def _cached_token(self, key: str) -> str | None:
         with self._lock:
             cached = self._tokens.get(key)
-        if cached and time.monotonic() < cached[1]:
-            return cached[0]
+        return cached[0] if cached and time.monotonic() < cached[1] else None
+
+    def _request_token(self, key: str, credentials: Credentials) -> str:
         call = {"token": {"url": self._security_api_url}}
         token = self._exchange(call, False, credentials)["token"]
         with self._lock:
@@ -159,9 +181,12 @@ class SunatClient:
             self._tokens[key] = (token["access_token"], reuse_before)
         return str(token["access_token"])
 
-    def _forget(self, credentials: Credentials) -> None:
+    def _forget(self, credentials: Credentials, rejected: str) -> None:
+        """Forgets the rejected token, unless another call already replaced it."""
+        key = _token_key(credentials)
         with self._lock:
-            self._tokens.pop(_token_key(credentials), None)
+            if self._tokens.get(key, ("",))[0] == rejected:
+                del self._tokens[key]
 
 
 def _parse(call: Any, response: httpx.Response) -> Any:
@@ -181,6 +206,7 @@ def _b64(data: bytes) -> str:
 
 
 _default_client: SunatClient | None = None
+_default_client_lock = threading.Lock()
 
 
 class FileSender:
@@ -198,7 +224,8 @@ class FileSender:
     def client(self) -> SunatClient:
         global _default_client
         if self._client is None:
-            _default_client = _default_client or SunatClient()
+            with _default_client_lock:
+                _default_client = _default_client or SunatClient()
             self._client = _default_client
         return self._client
 

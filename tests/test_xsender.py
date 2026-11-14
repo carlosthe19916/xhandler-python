@@ -156,4 +156,40 @@ def test_get_status_cdr() -> None:
 
 
 def test_credentials_hide_their_secrets() -> None:
-    assert "MODDATOS" not in repr(CREDENTIALS).replace("12345678959MODDATOS", "")
+    credentials = Credentials(
+        username="user", password="the-password", client_secret="the-secret", token="the-token"
+    )
+    shown = f"{credentials!r} {credentials!s} {credentials}"
+    for secret in ("the-password", "the-secret", "the-token"):
+        assert secret not in shown
+
+
+def test_a_supplied_token_is_used_as_is() -> None:
+    def handle(request: httpx.Request) -> tuple[int, str]:
+        assert request.headers["Authorization"] == "Bearer given-token"
+        return 401, '{"cod":"401","msg":"Unauthorized"}'
+
+    sunat = Sunat(handle)
+    sender = FileSender(
+        Urls.production(),
+        Credentials(username="", password="", token="given-token"),
+        sunat.client(),
+    )
+    sender.send_file(document("despatch-advice-T"))
+    assert len(sunat.requests) == 1
+
+
+def test_failed_connections_are_retried_once() -> None:
+    requests: list[httpx.Request] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if len(requests) == 1:
+            raise httpx.ConnectError("connection refused", request=request)
+        status, body = answer("send_file_cdr")
+        return httpx.Response(status, text=body)
+
+    client = SunatClient(httpx.Client(transport=httpx.MockTransport(respond)))
+    result = FileSender(Urls.beta(), CREDENTIALS, client).send_file(document("F001-1"))
+    assert result.cdr is not None
+    assert len(requests) == 2

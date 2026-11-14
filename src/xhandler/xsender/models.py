@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import base64
+from collections.abc import Iterator
 from enum import Enum
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, PlainSerializer
 
@@ -58,7 +59,9 @@ BILL_VALID_SERVICE_URL = "https://e-factura.sunat.gob.pe/ol-it-wsconsvalidcpe/bi
 
 
 class Credentials(_Model):
-    """Credentials of the company."""
+    """Credentials of the company. They never show their secrets."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
 
     username: str
     """SOL user, e.g. "20123456789MODDATOS"."""
@@ -69,8 +72,9 @@ class Credentials(_Model):
     token: str | None = Field(default=None, exclude=True)
     """A token of the guias obtained elsewhere; used as is when set."""
 
-    def __repr__(self) -> str:
-        return f"Credentials(username={self.username!r}, <secrets redacted>)"
+    def __repr_args__(self) -> Iterator[tuple[str | None, Any]]:
+        """For repr and str: only the username."""
+        yield "username", self.username
 
 
 class Target(_Model):
