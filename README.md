@@ -75,8 +75,7 @@ else:
 
 ## Contribuir
 
-Revisa [CONTRIBUTING.md](CONTRIBUTING.md). Preguntas en el
-[chat de Zulip](https://projectopenubl.zulipchat.com/).
+Revisa [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licencia
 
