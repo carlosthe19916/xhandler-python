@@ -34,7 +34,10 @@ class ErrorKind(str, Enum):
     RENDER = "render"
     """The XML could not be rendered."""
     INVALID_KEY = "invalid_key"
-    """The private key or certificate can't be read, e.g. a wrong keystore password."""
+    """The private key or certificate can't be read (e.g. a wrong keystore
+    password), or the certificate is not the one of the private key."""
+    RESPONSE = "response"
+    """The answer of SUNAT can't be read, e.g. an HTML error page."""
 
 
 class XhandlerError(Exception):

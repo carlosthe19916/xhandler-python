@@ -1,0 +1,131 @@
+import base64
+import json
+
+import httpx
+import pytest
+from conformance import cases
+
+from xhandler import ErrorKind, XhandlerError
+from xhandler.xsender import (
+    BILL_CONSULT_SERVICE_URL,
+    ConsultDocument,
+    Credentials,
+    FileSender,
+    Status,
+    SunatClient,
+    Urls,
+)
+
+CREDENTIALS = Credentials(
+    username="12345678959MODDATOS",
+    password="MODDATOS",
+    client_id="client-id",
+    client_secret="client-secret",
+)
+
+
+def corpus_input(op: str, name: str) -> dict:
+    return next(c for c in cases(op) if c.name == name).input
+
+
+def answer(name: str) -> tuple[int, str]:
+    """The SUNAT answer (status and body) recorded in a parse case."""
+    case = corpus_input("parse", name)
+    return case["status"], case["body"]
+
+
+def document(name: str) -> bytes:
+    """A UBL file of the corpus, e.g. "F001-1"."""
+    return base64.b64decode(corpus_input("prepare_send_file", name)["xml"])
+
+
+class Sunat:
+    """Answers every request, whatever its host, with ``handle``."""
+
+    def __init__(self, handle) -> None:
+        self.requests: list[httpx.Request] = []
+        self.handle = handle
+
+    def client(self) -> SunatClient:
+        def respond(request: httpx.Request) -> httpx.Response:
+            self.requests.append(request)
+            status, body = self.handle(request)
+            return httpx.Response(status, text=body)
+
+        return SunatClient(httpx.Client(transport=httpx.MockTransport(respond)))
+
+    def sender(self, urls: Urls) -> FileSender:
+        return FileSender(urls, CREDENTIALS, self.client())
+
+
+def test_send_file_reads_the_cdr() -> None:
+    sunat = Sunat(lambda _: answer("send_file_cdr"))
+    result = sunat.sender(Urls.beta()).send_file(document("F001-1"))
+
+    assert result.cdr is not None
+    assert result.cdr.status is Status.ACCEPTED
+    assert result.cdr.zip
+    assert result.send_target.url == Urls.beta().invoice
+    assert result.verify_ticket_target is None
+    request = sunat.requests[0]
+    assert request.headers["SOAPAction"] == "urn:sendBill"
+    assert str(request.url) == Urls.beta().invoice
+
+
+def test_send_file_reads_faults() -> None:
+    """SUNAT answers SOAP faults with HTTP 500"""
+    sunat = Sunat(lambda _: answer("send_file_rejected"))
+    result = sunat.sender(Urls.beta()).send_file(document("F001-1"))
+    assert result.fault is not None
+    assert result.fault.status is Status.REJECTED
+
+
+def test_unreadable_answers_are_response_errors() -> None:
+    sunat = Sunat(lambda _: (503, "<html>Service Unavailable</html>"))
+    with pytest.raises(XhandlerError) as error:
+        sunat.sender(Urls.beta()).send_file(document("F001-1"))
+    assert error.value.kind is ErrorKind.RESPONSE
+
+
+def test_verify_file_ticket_in_progress() -> None:
+    sunat = Sunat(lambda _: answer("verify_ticket_in_progress"))
+    result = sunat.sender(Urls.beta()).verify_file_ticket(
+        document("RA-20200328-1"), "1703154974517"
+    )
+    assert result.no_cdr is not None
+    assert result.no_cdr.status is Status.IN_PROGRESS
+
+
+def test_guias_reuse_the_token_until_rejected() -> None:
+    calls = {"tokens": 0, "sends": 0}
+
+    def handle(request: httpx.Request) -> tuple[int, str]:
+        if "/oauth2/token/" in request.url.path:
+            calls["tokens"] += 1
+            assert b"grant_type=password" in request.content
+            return 200, json.dumps({"access_token": "the-token", "expires_in": 3600})
+        calls["sends"] += 1
+        assert request.headers["Authorization"] == "Bearer the-token"
+        if calls["sends"] == 2:
+            return 401, '{"cod":"401","msg":"Unauthorized"}'
+        return 200, '{"numTicket":"a7b3c1d2-0001"}'
+
+    sender = Sunat(handle).sender(Urls.production())
+    for _ in range(3):
+        sender.send_file(document("despatch-advice-T"))
+    assert calls == {"tokens": 2, "sends": 3}
+
+
+def test_get_status_cdr() -> None:
+    sunat = Sunat(lambda _: answer("get_status_cdr"))
+    document = ConsultDocument(ruc="12345678912", tipo_comprobante="01", serie="F001", numero=1)
+    result = sunat.client().get_status_cdr(BILL_CONSULT_SERVICE_URL, document, CREDENTIALS)
+
+    assert result.status is not None
+    assert result.status.status_code == "0004"
+    assert result.status.cdr_zip == base64.b64decode("UEsDBA==")
+    assert sunat.requests[0].headers["SOAPAction"] == "urn:getStatusCdr"
+
+
+def test_credentials_hide_their_secrets() -> None:
+    assert "MODDATOS" not in repr(CREDENTIALS).replace("12345678959MODDATOS", "")
