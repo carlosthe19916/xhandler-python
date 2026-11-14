@@ -436,9 +436,10 @@ class TipoFormaPago(str, Enum):
 
 
 class FormaPago(_Model):
-    """Forma de pago"""
+    """Forma de pago. A missing `tipo` is filled in by the enricher, and
+    payment in full ("contado") has no `cuotas`."""
     tipo: TipoFormaPago | None = None
-    cuotas: list[CuotaPago]
+    cuotas: list[CuotaPago] = Field(default_factory=list)
     total: PlainDecimal | None = None
 
 
