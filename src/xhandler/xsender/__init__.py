@@ -15,7 +15,7 @@ from typing import Any
 
 import httpx
 
-from xhandler._core import invoke
+from xhandler._core import ErrorKind, XhandlerError, invoke
 from xhandler.xsender.models import (
     BILL_CONSULT_SERVICE_URL,
     BILL_VALID_SERVICE_URL,
@@ -57,14 +57,22 @@ __all__ = [
 ]
 
 
+_RATE_LIMIT_PAUSES = (1, 2)
+"""Seconds before retrying a request SUNAT's front proxy refused."""
+
+
 class SunatClient:
     """Sends the requests to SUNAT and keeps the OAuth tokens of the guias de
     remision. Share one between the FileSenders of several companies."""
 
-    def __init__(self, http: httpx.Client | None = None) -> None:
+    def __init__(
+        self, http: httpx.Client | None = None, security_api_url: str | None = None
+    ) -> None:
         """``http`` defaults to a client with a 30s connection timeout and a
-        120s timeout for the rest."""
+        120s timeout for the rest. ``security_api_url`` is where the tokens of
+        the guias are requested (SUNAT's by default)."""
         self._http = http or httpx.Client(timeout=httpx.Timeout(120, connect=30))
+        self._security_api_url = security_api_url
         self._lock = threading.Lock()
         self._tokens: dict[str, tuple[str, float]] = {}
 
@@ -93,18 +101,32 @@ class SunatClient:
         return ConsultResult.model_validate(self._exchange(call, False, credentials))
 
     def _exchange(self, call: Any, rest: bool, credentials: Credentials) -> Any:
-        """Sends a call and returns its answer. A REST call first gets a token;
-        a token SUNAT rejects (HTTP 401) is forgotten."""
-        token = self._token(credentials) if rest else None
-        request = invoke(
-            "request", {"call": call, "credentials": _json(credentials), "token": token}
-        )
-        response = self._send(request)
-        if rest and response.status_code == 401:
-            self._forget(credentials)
-        return invoke(
-            "parse", {"call": call, "status": response.status_code, "body": response.text}
-        )
+        """Sends a call and returns its answer. SUNAT revokes the tokens of the
+        guias before they expire: a REST call rejected with HTTP 401 is retried
+        once with a new token. A SOAP call refused by SUNAT's rate limiting is
+        retried after a pause."""
+        if rest:
+            response = self._send_with_token(call, credentials)
+            if response.status_code == 401 and credentials.token is None:
+                self._forget(credentials)
+                response = self._send_with_token(call, credentials)
+            return _parse(call, response)
+
+        request = self._request(call, credentials, None)
+        for pause in (*_RATE_LIMIT_PAUSES, None):
+            try:
+                return _parse(call, self._send(request))
+            except XhandlerError as error:
+                if error.kind is not ErrorKind.RATE_LIMITED or pause is None:
+                    raise
+                time.sleep(pause)
+
+    def _send_with_token(self, call: Any, credentials: Credentials) -> httpx.Response:
+        return self._send(self._request(call, credentials, self._token(credentials)))
+
+    @staticmethod
+    def _request(call: Any, credentials: Credentials, token: str | None) -> Any:
+        return invoke("request", {"call": call, "credentials": _json(credentials), "token": token})
 
     def _send(self, request: dict[str, Any]) -> httpx.Response:
         def send() -> httpx.Response:
@@ -121,13 +143,17 @@ class SunatClient:
             return send()  # once more when the connection failed
 
     def _token(self, credentials: Credentials) -> str:
-        """A cached token, reused until a minute before it expires, or a new one."""
+        """The token of the credentials, a cached one (reused until a minute
+        before it expires), or a new one."""
+        if credentials.token is not None:
+            return credentials.token
         key = _token_key(credentials)
         with self._lock:
             cached = self._tokens.get(key)
         if cached and time.monotonic() < cached[1]:
             return cached[0]
-        token = self._exchange("token", False, credentials)["token"]
+        call = {"token": {"url": self._security_api_url}}
+        token = self._exchange(call, False, credentials)["token"]
         with self._lock:
             reuse_before = time.monotonic() + max(token["expires_in"] - 60, 0)
             self._tokens[key] = (token["access_token"], reuse_before)
@@ -136,6 +162,10 @@ class SunatClient:
     def _forget(self, credentials: Credentials) -> None:
         with self._lock:
             self._tokens.pop(_token_key(credentials), None)
+
+
+def _parse(call: Any, response: httpx.Response) -> Any:
+    return invoke("parse", {"call": call, "status": response.status_code, "body": response.text})
 
 
 def _token_key(credentials: Credentials) -> str:

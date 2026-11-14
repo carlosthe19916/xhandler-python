@@ -112,8 +112,36 @@ def test_guias_reuse_the_token_until_rejected() -> None:
 
     sender = Sunat(handle).sender(Urls.production())
     for _ in range(3):
-        sender.send_file(document("despatch-advice-T"))
-    assert calls == {"tokens": 2, "sends": 3}
+        assert sender.send_file(document("despatch-advice-T")).ticket
+    # The second send is rejected once and retried with a new token
+    assert calls == {"tokens": 2, "sends": 4}
+
+
+def test_rate_limited_requests_are_retried() -> None:
+    def handle(_: httpx.Request) -> tuple[int, str]:
+        if len(sunat.requests) == 1:
+            return 401, "<html><title>401 Authorization Required</title></html>"
+        return answer("send_file_cdr")
+
+    sunat = Sunat(handle)
+    result = sunat.sender(Urls.beta()).send_file(document("F001-1"))
+    assert result.cdr is not None
+    assert len(sunat.requests) == 2
+
+
+def test_the_security_api_url_can_be_set() -> None:
+    token_urls: list[str] = []
+
+    def handle(request: httpx.Request) -> tuple[int, str]:
+        if "/oauth2/token/" in request.url.path:
+            token_urls.append(str(request.url))
+            return 200, json.dumps({"access_token": "the-token", "expires_in": 3600})
+        return 200, '{"numTicket":"a7b3c1d2-0001"}'
+
+    sunat = Sunat(handle)
+    client = SunatClient(sunat.client()._http, security_api_url="http://localhost:8080")
+    FileSender(Urls.production(), CREDENTIALS, client).send_file(document("despatch-advice-T"))
+    assert token_urls == ["http://localhost:8080/v1/clientessol/client-id/oauth2/token/"]
 
 
 def test_get_status_cdr() -> None:

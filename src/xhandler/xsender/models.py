@@ -6,7 +6,7 @@ import base64
 from enum import Enum
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, PlainSerializer
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, PlainSerializer
 
 
 def _from_base64(value: object) -> object:
@@ -66,6 +66,8 @@ class Credentials(_Model):
     client_id: str | None = None
     """API client of the REST services (guias de remision), from SUNAT's SOL menu."""
     client_secret: str | None = None
+    token: str | None = Field(default=None, exclude=True)
+    """A token of the guias obtained elsewhere; used as is when set."""
 
     def __repr__(self) -> str:
         return f"Credentials(username={self.username!r}, <secrets redacted>)"

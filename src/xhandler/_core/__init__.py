@@ -38,6 +38,8 @@ class ErrorKind(str, Enum):
     password), or the certificate is not the one of the private key."""
     RESPONSE = "response"
     """The answer of SUNAT can't be read, e.g. an HTML error page."""
+    RATE_LIMITED = "rate_limited"
+    """SUNAT's front proxy refused the request; the SunatClient already retried it."""
 
 
 class XhandlerError(Exception):
