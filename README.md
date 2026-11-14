@@ -3,19 +3,8 @@
 [![License](https://img.shields.io/github/license/project-openubl/xhandler-python?logo=apache)](https://www.apache.org/licenses/LICENSE-2.0)
 [![CI](https://github.com/project-openubl/xhandler-python/actions/workflows/ci.yml/badge.svg)](https://github.com/project-openubl/xhandler-python/actions/workflows/ci.yml)
 
-Crea, firma y envía los comprobantes electrónicos (XML UBL) de la SUNAT del Perú desde Python.
-
-| Módulo | Qué hace |
-|---|---|
-| `xhandler.xbuilder` | Crea el XML de facturas, boletas, notas de crédito y débito, guías de remisión, percepciones, retenciones, resúmenes diarios, comunicaciones de baja y reversiones. Solo das los datos esenciales: los valores por defecto, impuestos y totales se calculan |
-| `xhandler.xsigner` | Firma el XML (RSA-SHA256, certificados PEM o PKCS#12) |
-| `xhandler.xsender` | Envía a la SUNAT (servicios SOAP y API REST de guías) y lee el CDR, tickets y errores |
-
-Sin extensiones nativas que compilar: el trabajo lo hace el
-[núcleo xhandler](https://github.com/project-openubl/xhandler-rust), incrustado como un módulo
-WebAssembly. Las librerías de Go y Java usan el mismo núcleo, así que las tres producen el mismo
-XML, las mismas firmas y las mismas peticiones. Los modelos están tipados
-([pydantic](https://docs.pydantic.dev)).
+Crea, firma y envía los comprobantes electrónicos (XML UBL) de la SUNAT del Perú desde Python. Sin
+extensiones nativas que compilar.
 
 ## Instalación
 
@@ -68,8 +57,10 @@ else:
     print(result.fault.status, result.fault.code, result.fault.message)
 ```
 
-- **Crear**: `xbuilder.enrich` devuelve el documento con los valores calculados (impuestos,
-  totales, leyendas) en lugar del XML. `xbuilder.Defaults` cambia la fecha de emisión o las tasas.
+- **Crear**: facturas, boletas, notas de crédito y débito, guías de remisión, percepciones,
+  retenciones, resúmenes diarios, bajas y reversiones. `xbuilder.enrich` devuelve el documento con
+  los valores calculados (impuestos, totales, leyendas) en lugar del XML. `xbuilder.Defaults`
+  cambia la fecha de emisión o las tasas.
 - **Firmar**: `SigningKey.from_pem(llave_privada, certificado)` para archivos PEM. `sign` devuelve
   texto si recibe texto y bytes si recibe bytes.
 - **Enviar**: `send_pack` envía varias facturas en un zip. `SunatClient` también tiene los
@@ -84,7 +75,7 @@ else:
 
 ## Contribuir
 
-Revisa [CONTRIBUTING.md](CONTRIBUTING.md). Preguntas e ideas en el
+Revisa [CONTRIBUTING.md](CONTRIBUTING.md). Preguntas en el
 [chat de Zulip](https://projectopenubl.zulipchat.com/).
 
 ## Licencia
