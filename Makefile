@@ -32,8 +32,7 @@ verify-core:
 	./hack/core.sh verify src/xhandler/_core/xhandler.wasm src/xhandler/_core/VERSION
 
 verify-release:
-	@test "v$$(cat src/xhandler/_core/VERSION)" = "$(TAG)" || { echo "error: the core is $$(cat src/xhandler/_core/VERSION), not $(TAG:v%=%): run make sync CORE=$(TAG:v%=%)" >&2; exit 1; }
-	STRICT=true ./hack/core.sh verify src/xhandler/_core/xhandler.wasm src/xhandler/_core/VERSION
+	./hack/core.sh verify-release $(TAG) src/xhandler/_core/xhandler.wasm src/xhandler/_core/VERSION
 
 test:
 	uv run pytest
