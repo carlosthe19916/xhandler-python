@@ -32,3 +32,5 @@ jobs:
       - run: uv run ruff check
       - run: uv run ruff format --check
       - run: uv run mypy src
+      # The committed core is the xhandler.wasm of the xhandler-rust release in its VERSION
+      - run: make verify-core

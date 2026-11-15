@@ -23,11 +23,14 @@ XHANDLER_E2E=true uv run pytest tests/test_e2e.py  # crea, firma y envía una fa
   Rust (`src/xhandler/_core/xhandler.wasm`). Esos cambios van en xhandler-rust; luego aquí:
 
   ```shell
-  make sync RUST_REPO=../xhandler-rust
+  make sync RUST_REPO=../xhandler-rust   # el núcleo de tu checkout, para desarrollar
+  make sync CORE=6.0.0-alpha.1           # el núcleo de una versión de xhandler-rust
   ```
 
   `make sync` copia el núcleo, los modelos (`src/xhandler/xbuilder/models.py`) y el corpus de
-  conformidad (`testdata/conformance/`). No los edites a mano.
+  conformidad (`testdata/conformance/`). No los edites a mano. La versión del paquete es la del
+  núcleo, y una versión solo se publica con el núcleo de la versión igual de xhandler-rust:
+  `make verify-core` lo comprueba.
 - En Python está lo que necesita IO: el cliente HTTP (httpx), los reintentos y el caché de tokens
   (`src/xhandler/xsender/`).
 - Los nombres (`FileSender`, `SunatClient`, `SigningKey`...) se mantienen iguales en Go, Python y
