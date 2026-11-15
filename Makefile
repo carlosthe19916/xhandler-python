@@ -4,6 +4,7 @@
 #   make sync CORE=<version>   the xhandler-rust v<version> release
 #   make sync                  a checkout of xhandler-rust (RUST_REPO), for development
 #   make verify-core           checks that the committed core is the one released as its VERSION
+#   make verify-core-script    checks that hack/core.sh is release-tools' xhandler/core.sh
 #   make verify-release TAG=v<version>
 #                              what releasing <version> requires: syncing the xhandler-rust
 #                              release of the same version changes nothing
@@ -15,7 +16,7 @@ DIST := $(if $(CORE),.dist,$(RUST_REPO)/dist)
 
 SYNCED := src/xhandler/_core/xhandler.wasm src/xhandler/_core/VERSION src/xhandler/xbuilder/models.py testdata/conformance
 
-.PHONY: sync dist verify-core verify-release test lint
+.PHONY: sync dist verify-core verify-core-script verify-release test lint
 
 sync: dist
 	cp $(DIST)/xhandler.wasm $(DIST)/VERSION src/xhandler/_core/
@@ -32,6 +33,14 @@ endif
 
 verify-core:
 	./hack/core.sh verify src/xhandler/_core/xhandler.wasm src/xhandler/_core/VERSION
+
+# hack/core.sh is a copy: change release-tools' xhandler/core.sh, then copy it here
+CORE_SCRIPT := https://raw.githubusercontent.com/project-openubl/release-tools/main/xhandler/core.sh
+
+verify-core-script:
+	@original=$$(mktemp) && trap 'rm -f "$$original"' EXIT && \
+	curl -fsSL -o "$$original" $(CORE_SCRIPT) && \
+	{ diff -u "$$original" hack/core.sh || { echo "error: hack/core.sh differs from $(CORE_SCRIPT): change it there first, then copy it" >&2; exit 1; }; }
 
 verify-release:
 	./hack/core.sh verify-release $(TAG) src/xhandler/_core/xhandler.wasm src/xhandler/_core/VERSION

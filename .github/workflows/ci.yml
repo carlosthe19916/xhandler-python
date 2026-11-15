@@ -34,3 +34,5 @@ jobs:
       - run: uv run mypy src
       # The committed core is the xhandler.wasm of the xhandler-rust release in its VERSION
       - run: make verify-core
+      # hack/core.sh is release-tools' xhandler/core.sh
+      - run: make verify-core-script
